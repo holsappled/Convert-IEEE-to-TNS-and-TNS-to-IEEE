@@ -42,7 +42,7 @@ IEEEtoTNS
    	; Combine sign bit with mantisa and exponent 		
    	; If the sign bit is positive then the sign bit is already zero ( Do Nothing ), 
    	; If the sign bit is negative use ORRNE from flags set in line 18 to combine
-			ORRNE 	r4, r3, r4
+			ORRNE 		r4, r3, r4
 			
 
 TNStoIEEE
@@ -51,7 +51,7 @@ TNStoIEEE
    
                                       					; Isolate DNS sign bit
 			LDR		r9, [r11], #0         		; Load the IEEE value
-			ANDS	r5, r9,  #&80000000    			; Mask to pull out the sign bit
+			ANDS		r5, r9,  #&80000000    		; Mask to pull out the sign bit
 			                           			; Set flags for later in subroutine			
                                       					; DNS sign bit is now saved in r5
 
@@ -89,7 +89,7 @@ TNStoIEEE
 			CMP 		r9, r4                    	; Compare DCD data to converted TNS 
 			BNE 		TNStoIEEE                 	; If not equal branch and process again
 			
-	END                                 				; End program, all numbers equal
+			END                                 		; End program, all numbers equal
 			
 
 ; Raw DCD data, both numbers are equivalent
