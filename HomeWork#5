@@ -1,0 +1,97 @@
+; DEREK HOLSAPPLE
+; 20190311
+; Computer Organization II
+
+; Code Function Summary
+; 1) Convert a DCD number from IEEE 754 to TNS
+; 2) Convert a DCD number from TNS to IEEE 754
+; 3) Compare the converted TNS to raw TNS number
+; 4) Compare the converted IEEE 754 to raw IEEE 754 number
+
+; Set the addresses for the data
+			ADR		r12, IEEE            ; DCD IEEE 754 raw data            
+			ADR		r11, TNS             ; DCD TNS raw data    
+			
+IEEEtoTNS  
+   
+; 1) Convert IEEE 754 to TNS
+                                      						  ; Isolate IEEE sign bit
+			LDR		r10, [r12], #0     		  ; Load the IEEE value
+			ANDS     r2, r10,  #&80000000 ; Mask to pull out the sign bit
+                                      						 ; Set flags for later in subroutine			
+                                      						 ; IEEE sign bit is now saved in r2
+   	; Isolate IEEE Exponent
+			LSL		r3, r10, #1              	 ; LSR by 1 to remove sign bit
+			LSR 		r3 ,r3, #24                	 ; LSR by 24 to remove the Mantisa
+                                     					  	 ; IEEE exponent is now saved in r3
+	; Isolate IEEE Mantisa
+			LSL 		r4, r10, #9              	 ; LSL by 9 to remove sign bit and exponent
+			LSR 		r4, r4, #9                 	 ; LSR to prepare for TNS conversion		
+                                       					  	 ; IEEE Mantisa is now saved in r4  
+	; Exponent Conversion to TNS from IEEE
+			SUB 		r3, r3, #127              	 ; Subtract the exponent by the BIAS of IEEE
+                                     				 	      ; (2^(m-1)-1) = 127
+			ADD 		r3, r3, #256               ; Add the exponent by the BIAS of TNS 
+                                     				 	      ; (2^(m-1)) = 256
+	; Mantisa conversion to TNS from IEEE
+			LSL 		r4, r4, #8                 ; LSL 8 instead of 9, we are losing the 
+                                       					   ; least significant bit to fit Exponent 					
+	; Combine Mantisa and the Exponent together
+			ORR 		r4 , r4, r3                ; Combine the mantisa with the exponent
+	
+   	; Combine sign bit with mantisa and exponent 		
+   	; If the sign bit is positive then the sign bit is already zero ( Do Nothing ), 
+   	; If the sign bit is negative use ORRNE from flags set in line 18 to combine
+			ORRNE 	r4, r3, r4
+			
+
+TNStoIEEE
+  
+; 2) Convert TNS to IEEE 754
+   
+                                      							; Isolate DNS sign bit
+			LDR		r9, [r11], #0         			; Load the IEEE value
+			ANDS	r5, r9,  #&80000000     ; Mask to pull out the sign bit
+			                           					 	; Set flags for later in subroutine			
+                                      							; DNS sign bit is now saved in r5
+
+	; Isolate DNS Exponent
+			LSL 		r6, r9, #23              		; LSL to remove sign bit and Mantisa
+			LSR 		r6 ,r6, #23             	     ; LSR by 23 to get actual value
+                                       							; DNS exponent is now saved in r6
+	; Isolate DNS Mantisa
+			LSL 		r7, r9, #1               	     ; LSL to remove sign bit and exponent
+			LSR 		r7, r7, #10              		; LSR to remove the exponent
+                                       							; DNS Mantisa saved in r7
+	; Exponent Conversion to IEEE from TNS
+			SUB 		r6, r6, #256            	     ; Subtract the exponent by the BIAS of TNS 
+                                       							; (2^(m-1)) = 256
+			ADD	 	r6, r6, #127             	     ; Add the exponent by the BIAS of IEEE 
+                                       							; (2^(m-1)-1) = 127
+			LSL 		r6, r6, #23              		; LSL to stage for Mantissa (23 bits)
+
+	; Mantisa conversion to IEEE from TNS
+			LSL 		r7, r7, #1                		; LSL #1 exponent loses a bit in IEEE 754
+                                       							; Mantisa gains a bit in IEEE 754
+
+	; Combine mantisa and exponent 
+			ORR 		r6 , r6, r7              	    ; Use ORR to combine mantisa and exponent
+
+  	; Combine sign bit with mantisa and exponent 		
+   	; If the sign bit is positive then the sign bit is already zero ( Do Nothing ) 
+   	; If the sign bit is negative use ORRNE from flags set in line 54 to combine
+			ORRNE	 r6, r5, r6
+
+; 3) Compare raw data to processed data
+
+			CMP 		r10, r6                   		; Compare DCD data to converted IEEE 754 
+			BNE 		IEEEtoTNS                 		; If not equal branch and process again
+			CMP 		r9, r4                    			; Compare DCD data to converted TNS 
+			BNE 		TNStoIEEE                 		; If not equal branch and process again
+			
+	END                                 				  	; End program, all numbers equal
+			
+
+; Raw DCD data, both numbers are equivalent
+IEEE			DCD		&41FE0000          ; raw DCD IEEE 754 number		
+TNS			DCD		&7E000104          ; raw DCD TNS number
